@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CraftersMC Bazaar Flip Dashboard</title>
+  <meta name="description" content="Local SkyBlock Bazaar Flip tracker with 10-minute snapshot caching, profit ranking, and historical lookback.">
+  <link rel="stylesheet" href="/static/styles.css">
+  <script src="/static/chart.umd.min.js"></script>
+</head>
+<body>
+  <div class="app-container">
+    <!-- Header -->
+    <header class="app-header">
+      <div class="header-left">
+        <div class="logo-icon">⚖️</div>
+        <div>
+          <h1 class="app-title">CraftersMC Bazaar Flip</h1>
+          <p class="app-subtitle">10-Minute Cached SkyBlock Market Arbitrage</p>
+        </div>
+      </div>
+      <div class="header-right">
+        <button id="themeToggleBtn" class="btn btn-secondary btn-icon" title="Toggle Dark/Light Mode" aria-label="Toggle theme">
+          <span id="themeIcon">🌓</span>
+        </button>
+        <button id="refreshBtn" class="btn btn-primary" title="Trigger background refresh">
+          <span class="refresh-spinner" id="refreshSpinner">🔄</span> Refresh Cache
+        </button>
+      </div>
+    </header>
+
+    <!-- Stale / Status Notice Banner -->
+    <div id="staleNoticeBanner" class="alert-banner alert-warning" style="display: none;">
+      <span class="alert-icon">⚠️</span>
+      <div class="alert-content">
+        <strong>Data is Stale:</strong>
+        <span id="staleMessage">Cached data is older than 10 minutes or upstream is syncing. Retaining last good values.</span>
+      </div>
+    </div>
+
+    <!-- Status Bar -->
+    <section class="status-bar" id="statusBar">
+      <div class="status-chip">
+        <span class="status-indicator" id="statusDot"></span>
+        <span class="chip-label">Status:</span>
+        <span class="chip-value" id="statusText">Connecting...</span>
+      </div>
+      <div class="status-chip">
+        <span class="chip-label">Last Refresh:</span>
+        <span class="chip-value" id="lastRefreshTime">-</span>
+      </div>
+      <div class="status-chip">
+        <span class="chip-label">Next Cycle:</span>
+        <span class="chip-value" id="nextRefreshCountdown">-</span>
+      </div>
+      <div class="status-chip">
+        <span class="chip-label">Tracked Items:</span>
+        <span class="chip-value" id="itemCountDisplay">0</span>
+      </div>
+      <div class="status-chip">
+        <span class="chip-label">Paced Queue (7.5s):</span>
+        <span class="chip-value" id="queueProgressDisplay">Standby</span>
+      </div>
+      <div class="status-chip">
+        <span class="chip-label">Tax Base:</span>
+        <span class="chip-value">1.0% (Sell Offer)</span>
+      </div>
+    </section>
+
+    <!-- Controls / Filters Bar (Sticky) -->
+    <section class="controls-card sticky-bar" id="controlsBar">
+      <div class="controls-grid">
+        <!-- Search Input -->
+        <div class="control-group search-group">
+          <label for="searchInput" class="control-label">Filter Active Items</label>
+          <div class="input-with-icon">
+            <span class="input-icon">🔍</span>
+            <input type="text" id="searchInput" class="input-text" placeholder="e.g. Enchanted Diamond, Flesh..." autocomplete="off">
+            <button id="clearSearchBtn" class="clear-btn" style="display: none;" title="Clear search">✕</button>
+          </div>
+        </div>
+
+        <!-- Quick Favorite Catalog Picker (Bumps queue!) -->
+        <div class="control-group catalog-group">
+          <label for="catalogInput" class="control-label">★ Quick Star (Bumps to front of 7.5s queue)</label>
+          <div class="sort-controls">
+            <input list="catalogDatalist" id="catalogInput" class="input-text" placeholder="Search any Bazaar item...">
+            <datalist id="catalogDatalist"></datalist>
+            <button id="addCatalogFavBtn" class="btn btn-secondary btn-sm" title="Add favorite and bump to queue">★ Star</button>
+          </div>
+        </div>
+
+        <!-- Lookback Window -->
+        <div class="control-group">
+          <label for="lookbackSelect" class="control-label">Recent Changes</label>
+          <select id="lookbackSelect" class="input-select">
+            <option value="1h" selected>1 Hour Lookback</option>
+            <option value="last">Since Last Refresh (10m)</option>
+            <option value="24h">24 Hours Lookback</option>
+          </select>
+        </div>
+
+        <!-- Sort Column -->
+        <div class="control-group">
+          <label for="sortSelect" class="control-label">Sort By</label>
+          <div class="sort-controls">
+            <select id="sortSelect" class="input-select">
+              <option value="profit" selected>Net Profit / Flip</option>
+              <option value="roi">ROI (%)</option>
+              <option value="spread">Gross Spread</option>
+              <option value="sell_price">Sell Offer Price</option>
+              <option value="buy_price">Buy Order Price</option>
+              <option value="volume">Sell Volume</option>
+              <option value="name">Item Name</option>
+            </select>
+            <button id="sortDirBtn" class="btn btn-secondary btn-icon" title="Toggle Ascending/Descending" aria-label="Sort direction">
+              <span id="sortDirIcon">↓</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Minimum Profit Filter -->
+        <div class="control-group">
+          <label for="minProfitInput" class="control-label">Min Profit (Coins)</label>
+          <input type="number" id="minProfitInput" class="input-number" placeholder="Min profit" min="0" step="10">
+        </div>
+
+        <!-- Minimum Volume Filter -->
+        <div class="control-group">
+          <label for="minVolumeInput" class="control-label">Min Volume</label>
+          <input type="number" id="minVolumeInput" class="input-number" placeholder="Min volume" min="0" step="100">
+        </div>
+
+        <!-- Budget Cap Filter -->
+        <div class="control-group">
+          <label for="budgetCapInput" class="control-label">Budget Cap (Coins)</label>
+          <input type="number" id="budgetCapInput" class="input-number" placeholder="Max budget" min="0" step="1000">
+        </div>
+
+        <!-- Favorites & Filter Toggles -->
+        <div class="control-group toggles-group">
+          <label class="control-label">Watchlist</label>
+          <div class="toggles-row">
+            <label class="toggle-pill" id="favoritesPill">
+              <input type="checkbox" id="favoritesOnlyCheckbox">
+              <span>★ Favorites (<span id="favCount">0</span>)</span>
+            </label>
+            <button id="resetFiltersBtn" class="btn btn-outline btn-sm" title="Reset all filters">Reset</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Main Content Area -->
+    <main class="main-content">
+      <!-- Loading State -->
+      <div id="loadingIndicator" class="state-card">
+        <div class="spinner-large"></div>
+        <p>Loading Bazaar snapshot...</p>
+      </div>
+
+      <!-- Empty State -->
+      <div id="emptyIndicator" class="state-card" style="display: none;">
+        <div class="state-icon">🔎</div>
+        <h3>No Bazaar Items Match Filters</h3>
+        <p>Try clearing your search query or loosening minimum thresholds.</p>
+        <button id="emptyResetBtn" class="btn btn-secondary">Reset Filters</button>
+      </div>
+
+      <!-- Desktop Table View -->
+      <div class="table-container" id="tableContainer" style="display: none;">
+        <table class="market-table" id="marketTable">
+          <thead>
+            <tr>
+              <th class="col-fav" scope="col">★</th>
+              <th class="col-item" scope="col">Item</th>
+              <th class="col-price" scope="col">Best Buy Order</th>
+              <th class="col-price" scope="col">Best Sell Offer</th>
+              <th class="col-price" scope="col">Gross Spread</th>
+              <th class="col-profit" scope="col">Net Profit</th>
+              <th class="col-roi" scope="col">ROI</th>
+              <th class="col-change" scope="col">Price Change (<span class="lookback-label">1h</span>)</th>
+              <th class="col-volume" scope="col">Volume (Buy / Sell)</th>
+              <th class="col-updated" scope="col">Last Updated</th>
+              <th class="col-action" scope="col">Details</th>
+
+            </tr>
+          </thead>
+          <tbody id="marketTableBody">
+            <!-- Dynamic item rows injected by JS -->
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Mobile Stacked Cards View (<=640px) -->
+      <div class="cards-container" id="cardsContainer" style="display: none;">
+        <!-- Dynamic cards injected by JS -->
+      </div>
+    </main>
+
+    <!-- Item Detail Modal -->
+    <div class="modal-backdrop" id="detailModalBackdrop" style="display: none;" role="dialog" aria-modal="true" aria-labelledby="modalItemTitle">
+      <div class="modal-card">
+        <div class="modal-header">
+          <div class="modal-title-group">
+            <h2 id="modalItemTitle" class="modal-title">Item Name</h2>
+            <span id="modalItemId" class="badge badge-neutral">ITEM_ID</span>
+            <span id="modalStaleBadge" class="badge badge-warning" style="display: none;">STALE</span>
+          </div>
+          <button id="closeModalBtn" class="btn btn-icon modal-close" aria-label="Close modal">✕</button>
+        </div>
+
+        <div class="modal-body">
+          <!-- Metrics Grid -->
+          <div class="metrics-grid">
+            <div class="metric-card">
+              <span class="metric-label">Best Buy Order (Bid)</span>
+              <span class="metric-value" id="modalBuyPrice">-</span>
+              <span class="metric-sub" id="modalBuyQty">Depth: -</span>
+            </div>
+            <div class="metric-card">
+              <span class="metric-label">Best Sell Offer (Ask)</span>
+              <span class="metric-value" id="modalSellPrice">-</span>
+              <span class="metric-sub" id="modalSellQty">Depth: -</span>
+            </div>
+            <div class="metric-card">
+              <span class="metric-label">Gross Spread</span>
+              <span class="metric-value" id="modalSpread">-</span>
+            </div>
+            <div class="metric-card">
+              <span class="metric-label">1% Bazaar Tax</span>
+              <span class="metric-value text-muted" id="modalTax">-</span>
+              <span class="metric-sub">Base: Sell proceeds</span>
+            </div>
+            <div class="metric-card metric-card-highlight">
+              <span class="metric-label">Net Profit / Flip</span>
+              <span class="metric-value text-success" id="modalNetProfit">-</span>
+            </div>
+            <div class="metric-card">
+              <span class="metric-label">ROI (%)</span>
+              <span class="metric-value" id="modalRoi">-</span>
+            </div>
+            <div class="metric-card">
+              <span class="metric-label">Buy Volume</span>
+              <span class="metric-value" id="modalBuyVolume">-</span>
+            </div>
+            <div class="metric-card">
+              <span class="metric-label">Sell Volume</span>
+              <span class="metric-value" id="modalSellVolume">-</span>
+            </div>
+            <div class="metric-card">
+              <span class="metric-label">Budget Required</span>
+              <span class="metric-value" id="modalBudgetRequired">-</span>
+              <span class="metric-sub" id="modalCandidateQty">Matched qty: -</span>
+            </div>
+            <div class="metric-card">
+              <span class="metric-label">Last Snapshot Fetch</span>
+              <span class="metric-value text-small" id="modalLastFetch">-</span>
+            </div>
+          </div>
+
+          <!-- History Chart -->
+          <div class="chart-section">
+            <div class="chart-header">
+              <h3>7-Day Price History</h3>
+              <div class="chart-legend-custom">
+                <span class="legend-badge legend-sell">● Sell Offer (Ask)</span>
+                <span class="legend-badge legend-buy">● Buy Order (Bid)</span>
+              </div>
+            </div>
+            <div class="chart-container">
+              <canvas id="itemHistoryChart"></canvas>
+            </div>
+          </div>
+
+          <!-- Explanatory Note -->
+          <div class="modal-notice">
+            ℹ️ <strong>Formula Explanation:</strong> Net profit = sell offer - buy order - 1% tax on sale proceeds.
+            Profit/hour is unavailable until the CraftersMC API's volume time basis is confirmed.
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button id="modalFavoriteBtn" class="btn btn-secondary">★ Add to Watchlist</button>
+          <button id="modalDoneBtn" class="btn btn-primary">Done</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="app-footer">
+      <p>CraftersMC Bazaar Flip Dashboard &bull; Localhost 127.0.0.1 Only &bull; 10-Minute Snapshot Cache</p>
+    </footer>
+  </div>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>

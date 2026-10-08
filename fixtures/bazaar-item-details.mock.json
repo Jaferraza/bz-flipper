@@ -1,0 +1,93 @@
+{
+  "ENCHANTED_DIAMOND": {
+    "success": true,
+    "itemId": "ENCHANTED_DIAMOND",
+    "buyTopEntries": [
+      { "price": 1200.0, "quantity": 32, "orderCount": 2 },
+      { "price": 1250.0, "quantity": 64, "orderCount": 5 }
+    ],
+    "sellTopEntries": [
+      { "price": 1500.0, "quantity": 100, "orderCount": 3 },
+      { "price": 1450.0, "quantity": 128, "orderCount": 6 }
+    ],
+    "buyVolume": 15000,
+    "sellVolume": 12500,
+    "weeklyAveragePrice": 1320.5
+  },
+  "ENCHANTED_IRON": {
+    "success": true,
+    "itemId": "ENCHANTED_IRON",
+    "buyTopEntries": [
+      { "price": 500.0, "quantity": 100, "orderCount": 2 }
+    ],
+    "sellTopEntries": [
+      { "price": 600.0, "quantity": 80, "orderCount": 3 }
+    ],
+    "buyVolume": 5000,
+    "sellVolume": 4200,
+    "weeklyAveragePrice": 550.0
+  },
+  "ENCHANTED_EMERALD": {
+    "success": true,
+    "itemId": "ENCHANTED_EMERALD",
+    "buyTopEntries": [
+      { "price": 800.0, "quantity": 200, "orderCount": 5 }
+    ],
+    "sellTopEntries": [
+      { "price": 950.0, "quantity": 150, "orderCount": 4 }
+    ],
+    "buyVolume": 3000,
+    "sellVolume": 2800,
+    "weeklyAveragePrice": 870.0
+  },
+  "SUPER_COMPACTOR_3000": {
+    "success": true,
+    "itemId": "SUPER_COMPACTOR_3000",
+    "buyTopEntries": [
+      { "price": 350000.0, "quantity": 10, "orderCount": 8 }
+    ],
+    "sellTopEntries": [
+      { "price": 420000.0, "quantity": 5, "orderCount": 6 }
+    ],
+    "buyVolume": 120,
+    "sellVolume": 95,
+    "weeklyAveragePrice": 380000.0
+  },
+  "REVENANT_FLESH": {
+    "success": true,
+    "itemId": "REVENANT_FLESH",
+    "buyTopEntries": [
+      { "price": 2.0, "quantity": 50000, "orderCount": 15 }
+    ],
+    "sellTopEntries": [
+      { "price": 3.5, "quantity": 25000, "orderCount": 10 }
+    ],
+    "buyVolume": 250000,
+    "sellVolume": 180000,
+    "weeklyAveragePrice": 2.8
+  },
+  "UNPROFITABLE_ITEM": {
+    "success": true,
+    "itemId": "UNPROFITABLE_ITEM",
+    "buyTopEntries": [
+      { "price": 100.0, "quantity": 50, "orderCount": 1 }
+    ],
+    "sellTopEntries": [
+      { "price": 100.0, "quantity": 50, "orderCount": 1 }
+    ],
+    "buyVolume": 500,
+    "sellVolume": 400,
+    "weeklyAveragePrice": 100.0
+  },
+  "MISSING_SIDE_ITEM": {
+    "success": true,
+    "itemId": "MISSING_SIDE_ITEM",
+    "buyTopEntries": [
+      { "price": 50.0, "quantity": 10, "orderCount": 1 }
+    ],
+    "sellTopEntries": [],
+    "buyVolume": 100,
+    "sellVolume": 0,
+    "weeklyAveragePrice": 50.0
+  }
+}
